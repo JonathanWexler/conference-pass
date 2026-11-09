@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jon Wexler | Personal Pass</title>
+<meta name="description" content="Personal contact pass for Jon Wexler.">
+<style>
+  :root {
+    --ink: #1c2430;
+    --muted: #677180;
+    --line: #d9dee5;
+    --page: #eef1f5;
+    --card: #ffffff;
+    --accent: #1f4e79;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 32px 16px;
+    background: var(--page);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+  .logo { width: 72px; height: 72px; display: block; }
+  .pass {
+    width: 100%;
+    max-width: 380px;
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(28, 36, 48, .12);
+    overflow: hidden;
+  }
+  .head {
+    background: var(--accent);
+    color: #fff;
+    padding: 14px 24px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .details { padding: 24px; }
+  .label {
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 4px;
+  }
+  .value { margin: 0 0 20px; font-size: 18px; font-weight: 600; }
+  .name { font-size: 28px; line-height: 1.15; }
+  .value:last-child { margin-bottom: 0; }
+  .value a { color: inherit; text-decoration: none; }
+  .tear { border-top: 2px dashed var(--line); margin: 0 24px; }
+  .code { padding: 24px; text-align: center; }
+  #barcode { display: block; width: 100%; height: 96px; }
+  .code p { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+  .notice {
+    margin: 0;
+    padding: 12px 24px;
+    background: #f6f7f9;
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <!-- Replace this SVG with <img class="logo" src="logo.png" alt="Logo"> to use your own logo. -->
+  <svg class="logo" viewBox="0 0 72 72" role="img" aria-label="JW logo">
+    <rect width="72" height="72" rx="16" fill="#1f4e79"/>
+    <text x="36" y="46" text-anchor="middle" fill="#fff" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="700">JW</text>
+  </svg>
+
+  <main class="pass">
+    <div class="head">Personal Pass</div>
+    <div class="details">
+      <p class="label">Name</p>
+      <p class="value name">Jon Wexler</p>
+      <p class="label">Date</p>
+      <p class="value"><time id="today"></time></p>
+      <p class="label">Website</p>
+      <p class="value"><a href="https://jonwexler.com">jonwexler.com</a></p>
+    </div>
+    <div class="tear"></div>
+    <div class="code">
+      <svg id="barcode" role="img" aria-label="Barcode for jonwexler.com" preserveAspectRatio="none"></svg>
+      <p id="barcode-text"></p>
+    </div>
+    <p class="notice">Personal contact card. Not a ticket. Not valid for event admission.</p>
+  </main>
+
+  <script src="barcode.js"></script>
+  <script>
+    var today = new Date();
+    var el = document.getElementById('today');
+    el.textContent = today.toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' });
+
+    var text = 'https://jonwexler.com';
+    var modules = code128B(text);
+    var quiet = 10;
+    var svg = document.getElementById('barcode');
+    svg.setAttribute('viewBox', '0 0 ' + (modules.length + quiet * 2) + ' 60');
+    svg.setAttribute('shape-rendering', 'crispEdges');
+    var rects = '<rect width="100%" height="100%" fill="#fff"/>';
+    for (var i = 0; i < modules.length; i++) {
+      if (modules[i] !== '1') continue;
+      var start = i;
+      while (modules[i + 1] === '1') i++;
+      rects += '<rect x="' + (start + quiet) + '" y="0" width="' + (i - start + 1) + '" height="60" fill="#000"/>';
+    }
+    svg.innerHTML = rects;
+    document.getElementById('barcode-text').textContent = text.replace('https://', '');
+  </script>
+</body>
+</html>
