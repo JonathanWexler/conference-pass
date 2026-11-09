@@ -60,7 +60,7 @@
       #profile-editor { width: 100%; max-width: 380px; padding: 24px; background: white; border-radius: 16px; }
       #profile-editor label { display: block; margin-bottom: 16px; }
       #profile-editor input { display: block; width: 100%; margin-top: 8px; font: inherit; }
-      #profile-editor input[type="text"] { padding: 10px; }
+      #profile-editor input[type="text"], #profile-editor input[type="url"] { padding: 10px; }
       #profile-editor button { padding: 10px 16px; font: inherit; cursor: pointer; }
       .pass {
         width: 100%;
@@ -181,6 +181,7 @@
     <form id="profile-editor" hidden>
       <label>Name<input id="name-input" required maxlength="100" type="text" autocomplete="name" /></label>
       <label>Profile photo<input id="photo-input" type="file" accept="image/*" /></label>
+      <label>Or use an image URL<input id="photo-url" type="url" placeholder="https://example.com/photo.jpg" /></label>
       <button type="submit">Save profile</button>
       <button type="button" id="cancel-profile">Cancel</button>
       <p id="profile-status" role="status"></p>
@@ -191,13 +192,18 @@
       const link = document.getElementById("edit-profile");
       const nameInput = document.getElementById("name-input");
       const photoInput = document.getElementById("photo-input");
+      const photoUrl = document.getElementById("photo-url");
+      function isPhotoUrl(value) {
+        try { return ["https:", "http:"].includes(new URL(value).protocol); }
+        catch (_) { return false; }
+      }
       const status = document.getElementById("profile-status");
       let profile = { name: "Jon Wexler", photo: "" };
       try {
         const saved = JSON.parse(localStorage.getItem("personal-pass-profile"));
         if (saved && typeof saved.name === "string" && saved.name.trim()) {
           profile.name = saved.name;
-          if (typeof saved.photo === "string" && saved.photo.startsWith("data:image/")) profile.photo = saved.photo;
+          if (typeof saved.photo === "string" && (saved.photo.startsWith("data:image/") || isPhotoUrl(saved.photo))) profile.photo = saved.photo;
         }
       } catch (_) {}
       function renderProfile() {
@@ -205,7 +211,7 @@
         document.title = profile.name + " | Personal Pass";
         const photo = document.getElementById("profile-photo");
         photo.hidden = !profile.photo;
-        document.getElementById("profile-placeholder").hidden = !!profile.photo;
+        document.getElementById("profile-placeholder").toggleAttribute("hidden", !!profile.photo);
         if (profile.photo) { photo.src = profile.photo; photo.alt = profile.name + " profile photo"; }
       }
       renderProfile();
@@ -220,10 +226,13 @@
         link.setAttribute("aria-expanded", "true");
         nameInput.value = profile.name;
         photoInput.value = "";
+        photoUrl.value = isPhotoUrl(profile.photo) ? profile.photo : "";
         status.textContent = "";
         nameInput.focus();
       });
       document.getElementById("cancel-profile").addEventListener("click", closeEditor);
+      photoInput.addEventListener("change", function () { if (photoInput.files.length) photoUrl.value = ""; });
+      photoUrl.addEventListener("input", function () { if (photoUrl.value.trim()) photoInput.value = ""; });
       nameInput.addEventListener("input", function () { nameInput.setCustomValidity(""); });
       editor.addEventListener("submit", async function (event) {
         event.preventDefault();
@@ -251,6 +260,14 @@
               photo = canvas.toDataURL("image/jpeg", 0.85);
             } catch (_) { throw new Error("Unable to open this photo. Try a JPG or PNG image."); }
             finally { URL.revokeObjectURL(url); }
+          } else if (photoUrl.value.trim()) {
+            const url = photoUrl.value.trim();
+            if (!isPhotoUrl(url)) throw new Error("Enter an HTTP or HTTPS image URL.");
+            const image = new Image();
+            image.src = url;
+            try { await image.decode(); }
+            catch (_) { throw new Error("Unable to load this image URL. Check the link or upload a photo instead."); }
+            photo = url;
           }
           profile = { name: nameInput.value.trim(), photo: photo };
           renderProfile();
